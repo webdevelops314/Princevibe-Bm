@@ -3860,3 +3860,35 @@
   font-size: 0.75rem;
   color: #64748b;
 }
+
+/* Desktop Layout Styles */
+.desktop-layout {
+  display: block;
+}
+
+/* Mobile Layout Styles */
+.mobile-layout {
+  display: none;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 768px) {
+  .desktop-layout {
+    display: none !important;
+  }
+  
+  .mobile-layout {
+    display: block !important;
+  }
+  
+  /* Hide desktop sidebar on mobile */
+  .sidebar {
+    display: none !important;
+  }
+  
+  /* Adjust main content for mobile */
+  .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+}

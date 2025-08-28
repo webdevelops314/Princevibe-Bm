@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBusiness } from '../context/BusinessContext';
 import { formatCurrency } from '../utils/formatters';
+import MobileDashboard from './MobileDashboard';
 import { 
   FaHome, 
   FaBoxes, 
@@ -18,6 +19,8 @@ import {
 } from 'react-icons/fa';
 
 function Dashboard() {
+  const [isMobile, setIsMobile] = useState(false);
+  
   const { 
     inventory, 
     purchases, 
@@ -31,6 +34,22 @@ function Dashboard() {
     calculateReinvestmentAmount,
     calculatePartnerDistribution
   } = useBusiness();
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // If mobile, render mobile dashboard
+  if (isMobile) {
+    return <MobileDashboard />;
+  }
 
   const totalSales = calculateTotalSales();
   const totalPurchases = calculateTotalPurchases();
