@@ -1,0 +1,37 @@
+{
+  "name": "princevibe-business-manager",
+  "version": "1.0.0",
+  "description": "Complete business management system for PrinceVibe",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "server": "nodemon server.js",
+    "client": "npm start --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "npm run build --prefix client",
+    "install-client": "npm install --prefix client",
+    "heroku-postbuild": "npm run install-client && npm run build",
+    "install-all": "npm install && npm run install-client"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "concurrently": "^8.2.0"
+  },
+  "keywords": [
+    "business",
+    "management",
+    "inventory",
+    "sales",
+    "profit-loss",
+    "mongodb",
+    "react"
+  ],
+  "author": "PrinceVibe",
+  "license": "MIT"
+}
