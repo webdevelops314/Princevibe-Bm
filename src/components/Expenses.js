@@ -39,29 +39,48 @@ function Expenses() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const newExpense = {
-      ...formData,
-      id: Date.now(),
-      amount: parseFloat(formData.amount),
-      date: formData.date
-    };
+    try {
+      const newExpense = {
+        ...formData,
+        _id: Date.now().toString() + Math.random(),
+        amount: parseFloat(formData.amount),
+        date: new Date().toISOString()
+      };
 
-    dispatch({
-      type: 'UPDATE_EXPENSES',
-      payload: [...expenses, newExpense]
-    });
+      // Save to database
+      const response = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newExpense)
+      });
 
-    setFormData({
-      description: '',
-      amount: '',
-      category: '',
-      date: new Date().toISOString().split('T')[0],
-      notes: ''
-    });
-    setShowAddModal(false);
+      if (!response.ok) {
+        throw new Error(`Failed to add expense: ${response.status}`);
+      }
+
+      // Update local state
+      dispatch({
+        type: 'ADD_EXPENSE',
+        payload: newExpense
+      });
+
+      setFormData({
+        description: '',
+        amount: '',
+        category: '',
+        date: new Date().toISOString().split('T')[0],
+        notes: ''
+      });
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Error saving expense:', error);
+      alert('Error saving expense: ' + error.message);
+    }
   };
 
   const handleEdit = (expense) => {
@@ -76,43 +95,72 @@ function Expenses() {
     setShowEditModal(true);
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     
-    const updatedExpense = {
-      ...editingExpense,
-      ...formData,
-      amount: parseFloat(formData.amount),
-      date: formData.date
-    };
+    try {
+      const updatedExpense = {
+        ...editingExpense,
+        ...formData,
+        amount: parseFloat(formData.amount),
+        date: new Date().toISOString()
+      };
 
-    const updatedExpenses = expenses.map(expense =>
-      expense.id === editingExpense.id ? updatedExpense : expense
-    );
+      // Save to database
+      const response = await fetch(`/api/expenses/${updatedExpense._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedExpense)
+      });
 
-    dispatch({
-      type: 'UPDATE_EXPENSES',
-      payload: updatedExpenses
-    });
+      if (!response.ok) {
+        throw new Error(`Failed to update expense: ${response.status}`);
+      }
 
-    setShowEditModal(false);
-    setEditingExpense(null);
-    setFormData({
-      description: '',
-      amount: '',
-      category: '',
-      date: new Date().toISOString().split('T')[0],
-      notes: ''
-    });
+      // Update local state
+      dispatch({
+        type: 'UPDATE_EXPENSE',
+        payload: updatedExpense
+      });
+
+      setShowEditModal(false);
+      setEditingExpense(null);
+      setFormData({
+        description: '',
+        amount: '',
+        category: '',
+        date: new Date().toISOString().split('T')[0],
+        notes: ''
+      });
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      alert('Error updating expense: ' + error.message);
+    }
   };
 
-  const handleDelete = (expenseId) => {
+  const handleDelete = async (expenseId) => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
-      const updatedExpenses = expenses.filter(expense => expense.id !== expenseId);
-      dispatch({
-        type: 'UPDATE_EXPENSES',
-        payload: updatedExpenses
-      });
+      try {
+        // Delete from database
+        const response = await fetch(`/api/expenses/${expenseId}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete expense: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({
+          type: 'DELETE_EXPENSE',
+          payload: expenseId
+        });
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+        alert('Error deleting expense: ' + error.message);
+      }
     }
   };
 

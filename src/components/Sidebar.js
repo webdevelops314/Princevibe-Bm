@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
   FaHome, 
   FaBoxes, 
@@ -10,13 +11,15 @@ import {
   FaDatabase,
   FaBars, 
   FaChevronLeft,
-  FaChevronRight
+  FaChevronRight,
+  FaSignOutAlt
 } from 'react-icons/fa';
 
 function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const menuItems = [
     { path: '/', icon: FaHome, label: 'Dashboard', color: '#4F46E5' },
@@ -58,7 +61,13 @@ function Sidebar() {
       </button>
 
       {/* Sidebar */}
-      <div className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}>
+      <div 
+        className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}
+        data-collapsed={isCollapsed}
+        style={{ 
+          transition: 'all 0.3s ease'
+        }}
+      >
         {/* Sidebar Header */}
         <div className="sidebar-header">
           {!isCollapsed && (
@@ -74,6 +83,10 @@ function Sidebar() {
             className="collapse-btn"
             onClick={toggleSidebar}
             title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            style={{ 
+              marginLeft: isCollapsed ? 'auto' : '0',
+              marginRight: isCollapsed ? 'auto' : '0'
+            }}
           >
             {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
           </button>
@@ -113,10 +126,18 @@ function Sidebar() {
             <div className="user-info">
               <div className="user-avatar">👤</div>
               <div className="user-details">
-                <div className="user-name">Business Owner</div>
+                <div className="user-name">{user?.email || 'Business Owner'}</div>
                 <div className="user-role">Administrator</div>
               </div>
             </div>
+            <button 
+              className="logout-button"
+              onClick={logout}
+              title="Logout"
+            >
+              <FaSignOutAlt />
+              <span>Logout</span>
+            </button>
           </div>
         )}
       </div>

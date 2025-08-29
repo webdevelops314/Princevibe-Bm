@@ -80,7 +80,7 @@ function Inventory() {
     return (profit / totalCost) * 100;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const itemData = {
@@ -97,23 +97,67 @@ function Inventory() {
       totalExpenses: parseFloat(formData.marketingCost) + parseFloat(formData.deliveryCost),
       totalCost: calculateTotalCost(),
       profit: calculateProfit(),
-      profitPercentage: calculateProfitPercentage()
+      profitPercentage: calculateProfitPercentage(),
+      lastUpdated: new Date().toISOString()
     };
 
-    if (editingItem) {
-      dispatch({
-        type: 'UPDATE_INVENTORY_ITEM',
-        payload: { ...editingItem, ...itemData }
-      });
-    } else {
-      dispatch({
-        type: 'ADD_INVENTORY_ITEM',
-        payload: itemData
-      });
-    }
+    try {
+      if (editingItem) {
+        // Update existing item
+        const updatedItem = { ...editingItem, ...itemData };
+        
+        // Save to database
+        const response = await fetch(`/api/inventory/${updatedItem._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedItem)
+        });
 
-    resetForm();
-    setShowModal(false);
+        if (!response.ok) {
+          throw new Error(`Failed to update product: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({
+          type: 'UPDATE_INVENTORY_ITEM',
+          payload: updatedItem
+        });
+      } else {
+        // Add new item
+        const newItem = {
+          ...itemData,
+          _id: Date.now().toString() + Math.random(),
+          dateAdded: new Date().toISOString()
+        };
+
+        // Save to database
+        const response = await fetch('/api/inventory', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newItem)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to add product: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({
+          type: 'ADD_INVENTORY_ITEM',
+          payload: newItem
+        });
+      }
+
+      resetForm();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error saving product:', error);
+      alert('Error saving product: ' + error.message);
+    }
   };
 
   const resetForm = () => {
@@ -135,9 +179,24 @@ function Inventory() {
     setShowModal(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      dispatch({ type: 'DELETE_INVENTORY_ITEM', payload: id });
+      try {
+        // Delete from database
+        const response = await fetch(`/api/inventory/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete product: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({ type: 'DELETE_INVENTORY_ITEM', payload: id });
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        alert('Error deleting product: ' + error.message);
+      }
     }
   };
 

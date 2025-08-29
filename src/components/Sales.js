@@ -88,7 +88,7 @@ function Sales() {
     return totalRevenue - (wholesaleCost * quantity) - expenses;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const totalRevenue = calculateTotalRevenue();
@@ -105,23 +105,66 @@ function Sales() {
       totalProfit: totalProfit,
       // Additional calculated fields
       profitMargin: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
-      costOfGoods: parseFloat(formData.wholesalePrice) * parseInt(formData.quantity)
+      costOfGoods: parseFloat(formData.wholesalePrice) * parseInt(formData.quantity),
+      date: new Date().toISOString()
     };
 
-    if (editingSale) {
-      dispatch({
-        type: 'UPDATE_SALE',
-        payload: { ...editingSale, ...saleData }
-      });
-    } else {
-      dispatch({
-        type: 'ADD_SALE',
-        payload: saleData
-      });
-    }
+    try {
+      if (editingSale) {
+        // Update existing sale
+        const updatedSale = { ...editingSale, ...saleData };
+        
+        // Save to database
+        const response = await fetch(`/api/sales/${updatedSale._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedSale)
+        });
 
-    resetForm();
-    setShowModal(false);
+        if (!response.ok) {
+          throw new Error(`Failed to update sale: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({
+          type: 'UPDATE_SALE',
+          payload: updatedSale
+        });
+      } else {
+        // Add new sale
+        const newSale = {
+          ...saleData,
+          _id: Date.now().toString() + Math.random()
+        };
+
+        // Save to database
+        const response = await fetch('/api/sales', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newSale)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to add sale: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({
+          type: 'ADD_SALE',
+          payload: newSale
+        });
+      }
+
+      resetForm();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error saving sale:', error);
+      alert('Error saving sale: ' + error.message);
+    }
   };
 
   const resetForm = () => {
@@ -148,9 +191,24 @@ function Sales() {
     setShowModal(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this sale?')) {
-      dispatch({ type: 'DELETE_SALE', payload: id });
+      try {
+        // Delete from database
+        const response = await fetch(`/api/sales/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete sale: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({ type: 'DELETE_SALE', payload: id });
+      } catch (error) {
+        console.error('Error deleting sale:', error);
+        alert('Error deleting sale: ' + error.message);
+      }
     }
   };
 

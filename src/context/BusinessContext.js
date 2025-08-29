@@ -1,14 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
-import { connectDB } from '../utils/database';
-import { 
-  inventoryService, 
-  purchaseService, 
-  saleService, 
-  expenseService, 
-  partnerService, 
-  settingsService,
-  migrateFromLocalStorage
-} from '../services/databaseService';
+import apiService from '../services/apiService';
 
 const BusinessContext = createContext();
 
@@ -93,8 +84,45 @@ const businessReducer = (state, action) => {
     case 'UPDATE_EXPENSES':
       return { ...state, expenses: action.payload };
     
+    case 'ADD_EXPENSE':
+      return { ...state, expenses: [...state.expenses, action.payload] };
+    
+    case 'UPDATE_EXPENSE':
+      return {
+        ...state,
+        expenses: state.expenses.map(expense => 
+          expense._id === action.payload._id ? action.payload : expense
+        )
+      };
+    
+    case 'DELETE_EXPENSE':
+      return {
+        ...state,
+        expenses: state.expenses.filter(expense => expense._id !== action.payload)
+      };
+    
+    case 'ADD_PURCHASE':
+      return { ...state, purchases: [...state.purchases, action.payload] };
+    
     case 'UPDATE_PARTNERS':
       return { ...state, partners: action.payload };
+    
+    case 'ADD_PARTNER':
+      return { ...state, partners: [...state.partners, action.payload] };
+    
+    case 'UPDATE_PARTNER':
+      return {
+        ...state,
+        partners: state.partners.map(partner => 
+          partner._id === action.payload._id ? action.payload : partner
+        )
+      };
+    
+    case 'DELETE_PARTNER':
+      return {
+        ...state,
+        partners: state.partners.filter(partner => partner._id !== action.payload)
+      };
     
     case 'UPDATE_SETTINGS':
       return { ...state, settings: action.payload };
@@ -114,23 +142,18 @@ export const BusinessProvider = ({ children }) => {
       try {
         dispatch({ type: 'SET_LOADING', payload: true });
         
-        // Simulate database connection
-        await connectDB();
-        dispatch({ type: 'SET_CONNECTION_STATUS', payload: true });
-        
-        // Check if we have data in localStorage to migrate
-        const localData = JSON.parse(localStorage.getItem('princeVibeBusinessData') || '{}');
-        const hasLocalData = Object.keys(localData).some(key => 
-          localData[key] && Array.isArray(localData[key]) && localData[key].length > 0
-        );
-        
-        if (hasLocalData) {
-          console.log('🔄 Found local data, preparing for future migration...');
-          await migrateFromLocalStorage(localData);
+        // Check API health
+        try {
+          await apiService.healthCheck();
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: true });
+          
+          // Load data from database
+          await loadFromDatabase();
+        } catch (error) {
+          console.log('API not available, falling back to localStorage');
+          dispatch({ type: 'SET_CONNECTION_STATUS', payload: false });
+          await loadFromLocalStorage();
         }
-        
-        // Load all data from localStorage-based service
-        await loadAllData();
         
         setIsInitialized(true);
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -150,8 +173,8 @@ export const BusinessProvider = ({ children }) => {
     initializeApp();
   }, []);
 
-  // Load all data from localStorage-based service
-  const loadAllData = async () => {
+  // Load all data from database
+  const loadFromDatabase = async () => {
     try {
       const [
         inventory,
@@ -161,12 +184,12 @@ export const BusinessProvider = ({ children }) => {
         partners,
         settings
       ] = await Promise.all([
-        inventoryService.getAll(),
-        purchaseService.getAll(),
-        saleService.getAll(),
-        expenseService.getAll(),
-        partnerService.getAll(),
-        settingsService.get()
+        apiService.getInventory(),
+        apiService.getPurchases(),
+        apiService.getSales(),
+        apiService.getExpenses(),
+        apiService.getPartners(),
+        apiService.getSettings()
       ]);
 
       dispatch({ type: 'SET_INVENTORY', payload: inventory });
@@ -177,7 +200,7 @@ export const BusinessProvider = ({ children }) => {
       dispatch({ type: 'SET_SETTINGS', payload: settings });
       
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading data from database:', error);
       throw error;
     }
   };
@@ -250,6 +273,25 @@ export const BusinessProvider = ({ children }) => {
     }));
   };
 
+  // Migrate data from localStorage to database
+  const migrateToDatabase = async () => {
+    try {
+      const localData = JSON.parse(localStorage.getItem('princeVibeBusinessData') || '{}');
+      await apiService.migrateData(localData);
+      
+      // Reload data from database
+      await loadFromDatabase();
+      
+      // Clear localStorage after successful migration
+      localStorage.removeItem('princeVibeBusinessData');
+      
+      return { success: true, message: 'Data migrated successfully to database' };
+    } catch (error) {
+      console.error('Error migrating data:', error);
+      return { success: false, message: error.message };
+    }
+  };
+
   const value = {
     ...state,
     dispatch,
@@ -262,7 +304,9 @@ export const BusinessProvider = ({ children }) => {
     calculateReinvestmentAmount,
     calculatePartnerDistribution,
     isInitialized,
-    saveToLocalStorage
+    saveToLocalStorage,
+    migrateToDatabase,
+    loadFromDatabase
   };
 
   return (

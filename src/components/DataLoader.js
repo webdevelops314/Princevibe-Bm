@@ -128,7 +128,7 @@ function DataLoader() {
       productName: "Original Black Aura Watch",
       customerName: "Shahid Zafar",
       phoneNo: "0300-5211555",
-      emailAddress: "shahidzafar.4you@gmail.com",
+      emailAddress: "shahidzafar.4you@gmail.co",
       shippingAddress: "NAG, Karianwala Gujrat, Punjab 50830",
       paymentMethod: "Cash On Delivery",
       quantity: 1,
@@ -143,7 +143,7 @@ function DataLoader() {
       productName: "Patek Phillipe Diamond (Gold)",
       customerName: "Muhammad Farhan",
       phoneNo: "0307-6817272",
-      emailAddress: "arhamluqman2211@gmail.com",
+      emailAddress: "arhamluqman2211@gmail",
       shippingAddress: "Qaiser PCO, Karianwala, Gujrat, Punjab",
       paymentMethod: "Cash On Delivery",
       quantity: 1,
@@ -158,7 +158,7 @@ function DataLoader() {
       productName: "Black Arabic Aura Fiber (Black)",
       customerName: "Muhammad Akhyar",
       phoneNo: "0326-1502830",
-      emailAddress: "arhamluqman2211@gmail.com",
+      emailAddress: "arhamluqman2211@gmail.comS",
       shippingAddress: "Kainat Studio, Karianwala, Gujrat, Punjab",
       paymentMethod: "Cash On Delivery",
       quantity: 1,
@@ -188,7 +188,7 @@ function DataLoader() {
       productName: "Black Arabic Aura Fiber (Black)",
       customerName: "Hammad Ashraf",
       phoneNo: "0302-0723311",
-      emailAddress: "hammadashraf058@gmail.com",
+      emailAddress: "hammadashraf058@gmail.",
       shippingAddress: "UBL Bank Karianwala, Gujrat, Punjab",
       paymentMethod: "Cash On Delivery",
       quantity: 1,
@@ -232,52 +232,129 @@ function DataLoader() {
 
   const loadSampleData = async () => {
     setIsLoading(true);
-    setMessage('Loading sample data...');
+    setMessage('Loading sample data to MongoDB...');
     
     try {
-      // Clear existing data
-      dispatch({ type: 'SET_INVENTORY', payload: [] });
-      dispatch({ type: 'SET_SALES', payload: [] });
-      
-      // Add each product
-      for (const product of sampleProducts) {
-        dispatch({
-          type: 'ADD_INVENTORY_ITEM',
-          payload: {
-            ...product,
-            _id: Date.now().toString() + Math.random(),
-            dateAdded: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-            costPrice: product.wholesalePrice + product.boxPrice,
-            totalExpenses: product.marketingCost + product.deliveryCost,
-            totalCost: product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost,
-            profit: product.finalPrice - (product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost),
-            profitPercentage: ((product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost) > 0) ? 
-              ((product.finalPrice - (product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost)) / 
-               (product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost)) * 100 : 0
+      // Prepare data for database upload
+      const inventoryData = sampleProducts.map(product => ({
+        ...product,
+        dateAdded: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        costPrice: product.wholesalePrice + product.boxPrice,
+        totalExpenses: product.marketingCost + product.deliveryCost,
+        totalCost: product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost,
+        profit: product.finalPrice - (product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost),
+        profitPercentage: ((product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost) > 0) ? 
+          ((product.finalPrice - (product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost)) / 
+           (product.wholesalePrice + product.boxPrice + product.marketingCost + product.deliveryCost)) * 100 : 0
+      }));
+
+      const salesData = sampleOrders.map(order => ({
+        ...order,
+        date: new Date().toISOString(),
+        costOfGoods: order.wholesalePrice,
+        profitMargin: order.wholesalePrice > 0 ? (order.totalProfit / order.wholesalePrice) * 100 : 0
+      }));
+
+      // Upload to MongoDB using the migration API
+      const response = await fetch('/api/migrate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            inventory: inventoryData,
+            sales: salesData,
+            purchases: [
+              {
+                productName: "Black Aura Original",
+                supplier: "Wholesale Supplier 1",
+                quantity: 5,
+                unitCost: 3500,
+                totalCost: 17500,
+                date: new Date().toISOString(),
+                notes: "Initial stock purchase"
+              },
+              {
+                productName: "Patek Philippe D.Watch Gold",
+                supplier: "Wholesale Supplier 2",
+                quantity: 3,
+                unitCost: 2300,
+                totalCost: 6900,
+                date: new Date().toISOString(),
+                notes: "Premium watch stock"
+              }
+            ],
+            expenses: [
+              {
+                description: "Facebook Ads Campaign",
+                amount: 5000,
+                category: "Marketing",
+                date: new Date().toISOString(),
+                notes: "Monthly social media advertising"
+              },
+              {
+                description: "Delivery Service",
+                amount: 1500,
+                category: "Delivery",
+                date: new Date().toISOString(),
+                notes: "Courier service charges"
+              },
+              {
+                description: "Office Supplies",
+                amount: 800,
+                category: "Office",
+                date: new Date().toISOString(),
+                notes: "Packaging materials and supplies"
+              }
+            ],
+            partners: [
+              {
+                name: "Partner 1",
+                share: 50,
+                email: "partner1@princevibe.com",
+                phone: "+92-300-0000001",
+                notes: "Primary business partner"
+              },
+              {
+                name: "Partner 2", 
+                share: 50,
+                email: "partner2@princevibe.com",
+                phone: "+92-300-0000002",
+                notes: "Secondary business partner"
+              }
+            ],
+            settings: {
+              reinvestmentPercentage: 70,
+              currency: 'PKR',
+              businessName: 'PrinceVibe Business Manager',
+              taxRate: 0
+            }
           }
-        });
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const result = await response.json();
       
-      // Add each sale
-      for (const order of sampleOrders) {
-        dispatch({
-          type: 'ADD_SALE',
-          payload: {
-            ...order,
-            _id: Date.now().toString() + Math.random(),
-            date: new Date().toISOString(),
-            productId: sampleProducts.find(p => p.productName === order.productName)?._id || '',
-            // Calculate actual profit from this specific sale
-            actualProfit: order.totalProfit,
-            actualProfitPercentage: order.wholesalePrice > 0 ? (order.totalProfit / order.wholesalePrice) * 100 : 0
-          }
-        });
-      }
+      // Update local state with the uploaded data
+      dispatch({ type: 'SET_INVENTORY', payload: inventoryData });
+      dispatch({ type: 'SET_SALES', payload: salesData });
       
-      setMessage('✅ Sample data loaded successfully! 11 products and 7 sales added.');
+      setMessage('✅ Sample data uploaded to MongoDB successfully! 11 products, 7 sales, 2 purchases, 3 expenses, 2 partners, and settings added.');
+      
+      // Refresh the page to show the new data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
     } catch (error) {
-      setMessage('❌ Error loading sample data: ' + error.message);
+      console.error('Error uploading sample data:', error);
+      setMessage('❌ Error uploading sample data: ' + error.message);
     } finally {
       setIsLoading(false);
     }

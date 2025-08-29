@@ -78,34 +78,96 @@ function Partners() {
     }));
   };
 
-  const handlePartnerSubmit = (e) => {
+  const handlePartnerSubmit = async (e) => {
     e.preventDefault();
     
-    if (editingPartner) {
-      dispatch({
-        type: 'UPDATE_PARTNER',
-        payload: { ...editingPartner, ...partnerFormData }
-      });
-    } else {
-      dispatch({
-        type: 'ADD_PARTNER',
-        payload: partnerFormData
-      });
-    }
+    try {
+      if (editingPartner) {
+        // Update existing partner
+        const updatedPartner = { ...editingPartner, ...partnerFormData };
+        
+        // Save to database
+        const response = await fetch(`/api/partners/${updatedPartner._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedPartner)
+        });
 
-    resetPartnerForm();
-    setShowPartnerModal(false);
+        if (!response.ok) {
+          throw new Error(`Failed to update partner: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({
+          type: 'UPDATE_PARTNER',
+          payload: updatedPartner
+        });
+      } else {
+        // Add new partner
+        const newPartner = {
+          ...partnerFormData,
+          _id: Date.now().toString() + Math.random(),
+          dateAdded: new Date().toISOString()
+        };
+
+        // Save to database
+        const response = await fetch('/api/partners', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newPartner)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to add partner: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({
+          type: 'ADD_PARTNER',
+          payload: newPartner
+        });
+      }
+
+      resetPartnerForm();
+      setShowPartnerModal(false);
+    } catch (error) {
+      console.error('Error saving partner:', error);
+      alert('Error saving partner: ' + error.message);
+    }
   };
 
-  const handleSettingsSubmit = (e) => {
+  const handleSettingsSubmit = async (e) => {
     e.preventDefault();
     
-    dispatch({
-      type: 'UPDATE_SETTINGS',
-      payload: settingsFormData
-    });
+    try {
+      // Save settings to database
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settingsFormData)
+      });
 
-    setEditingSettings(false);
+      if (!response.ok) {
+        throw new Error(`Failed to update settings: ${response.status}`);
+      }
+
+      // Update local state
+      dispatch({
+        type: 'UPDATE_SETTINGS',
+        payload: settingsFormData
+      });
+
+      setEditingSettings(false);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Error saving settings: ' + error.message);
+    }
   };
 
   const resetPartnerForm = () => {
@@ -124,9 +186,24 @@ function Partners() {
     setShowPartnerModal(true);
   };
 
-  const handleDeletePartner = (id) => {
+  const handleDeletePartner = async (id) => {
     if (window.confirm('Are you sure you want to delete this partner?')) {
-      dispatch({ type: 'DELETE_PARTNER', payload: id });
+      try {
+        // Delete from database
+        const response = await fetch(`/api/partners/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete partner: ${response.status}`);
+        }
+
+        // Update local state
+        dispatch({ type: 'DELETE_PARTNER', payload: id });
+      } catch (error) {
+        console.error('Error deleting partner:', error);
+        alert('Error deleting partner: ' + error.message);
+      }
     }
   };
 

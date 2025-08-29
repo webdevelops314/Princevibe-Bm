@@ -37,66 +37,114 @@ function Purchases() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const newPurchase = {
-      ...formData,
-      id: Date.now(),
-      quantity: parseInt(formData.quantity),
-      costPrice: parseFloat(formData.costPrice),
-      boxPrice: parseFloat(formData.boxPrice),
-      totalCost: (parseFloat(formData.costPrice) + parseFloat(formData.boxPrice)) * parseInt(formData.quantity)
-    };
-
-    // Add purchase
-    dispatch({
-      type: 'UPDATE_PURCHASES',
-      payload: [...purchases, newPurchase]
-    });
-
-    // Update inventory
-    const existingItem = inventory.find(item => item.name === formData.productName);
-    if (existingItem) {
-      const updatedInventory = inventory.map(item =>
-        item.name === formData.productName
-          ? { ...item, quantity: item.quantity + parseInt(formData.quantity) }
-          : item
-      );
-      dispatch({
-        type: 'UPDATE_INVENTORY',
-        payload: updatedInventory
-      });
-    } else {
-      // Add new product to inventory
-      const newProduct = {
-        id: Date.now(),
-        name: formData.productName,
-        category: 'New Purchase',
-        costPrice: parseFloat(formData.costPrice),
-        sellingPrice: parseFloat(formData.costPrice) * 1.5, // Default markup
+    try {
+      const newPurchase = {
+        ...formData,
+        _id: Date.now().toString() + Math.random(),
         quantity: parseInt(formData.quantity),
+        costPrice: parseFloat(formData.costPrice),
         boxPrice: parseFloat(formData.boxPrice),
-        supplier: formData.supplier,
-        description: formData.notes,
-        dateAdded: new Date().toISOString()
+        totalCost: (parseFloat(formData.costPrice) + parseFloat(formData.boxPrice)) * parseInt(formData.quantity),
+        date: new Date().toISOString()
       };
-      dispatch({
-        type: 'UPDATE_INVENTORY',
-        payload: [...inventory, newProduct]
-      });
-    }
 
-    setFormData({
-      productName: '',
-      supplier: '',
-      quantity: '',
-      costPrice: '',
-      boxPrice: '',
-      date: new Date().toISOString().split('T')[0],
-      notes: ''
-    });
-    setShowAddModal(false);
+      // Save purchase to database
+      const response = await fetch('/api/purchases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newPurchase)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to add purchase: ${response.status}`);
+      }
+
+      // Add purchase to local state
+      dispatch({
+        type: 'ADD_PURCHASE',
+        payload: newPurchase
+      });
+
+      // Update inventory
+      const existingItem = inventory.find(item => item.productName === formData.productName);
+      if (existingItem) {
+        const updatedItem = { 
+          ...existingItem, 
+          fullStock: existingItem.fullStock + parseInt(formData.quantity),
+          lastUpdated: new Date().toISOString()
+        };
+
+        // Update inventory in database
+        const inventoryResponse = await fetch(`/api/inventory/${existingItem._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedItem)
+        });
+
+        if (!inventoryResponse.ok) {
+          throw new Error(`Failed to update inventory: ${inventoryResponse.status}`);
+        }
+
+        // Update local inventory state
+        dispatch({
+          type: 'UPDATE_INVENTORY_ITEM',
+          payload: updatedItem
+        });
+      } else {
+        // Add new product to inventory
+        const newProduct = {
+          productName: formData.productName,
+          fullStock: parseInt(formData.quantity),
+          wholesalePrice: parseFloat(formData.costPrice),
+          boxPrice: parseFloat(formData.boxPrice),
+          marketingCost: 0,
+          deliveryCost: 0,
+          finalPrice: parseFloat(formData.costPrice) * 1.5, // Default markup
+          dateAdded: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        };
+
+        // Save new product to database
+        const productResponse = await fetch('/api/inventory', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newProduct)
+        });
+
+        if (!productResponse.ok) {
+          throw new Error(`Failed to add new product: ${productResponse.status}`);
+        }
+
+        // Add to local inventory state
+        dispatch({
+          type: 'ADD_INVENTORY_ITEM',
+          payload: newProduct
+        });
+      }
+
+      setFormData({
+        productName: '',
+        supplier: '',
+        quantity: '',
+        costPrice: '',
+        boxPrice: '',
+        date: new Date().toISOString().split('T')[0],
+        notes: ''
+      });
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Error saving purchase:', error);
+      alert('Error saving purchase: ' + error.message);
+    }
   };
 
   // Filter and search
