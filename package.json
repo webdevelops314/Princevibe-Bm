@@ -6,16 +6,21 @@
   "scripts": {
     "start": "node server.js",
     "server": "nodemon server.js",
-    "client": "npm start --prefix client",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "install-client": "npm install --prefix client",
-    "install-all": "npm install && npm run install-client"
+    "build": "react-scripts build",
+    "dev": "concurrently \"npm run server\" \"npm start\"",
+    "install-all": "npm install"
   },
   "dependencies": {
     "express": "^4.18.2",
     "mongoose": "^7.5.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.10.1",
+    "react-router-dom": "^6.14.1",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
@@ -31,5 +36,17 @@
     "react"
   ],
   "author": "PrinceVibe",
-  "license": "MIT"
+  "license": "MIT",
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
 }
