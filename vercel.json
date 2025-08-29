@@ -1,5 +1,11 @@
 {
-  "buildCommand": "npm install && npm run build",
-  "outputDirectory": "build",
-  "installCommand": "npm install"
+  "builds": [
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ]
 }
